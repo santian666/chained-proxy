@@ -57,7 +57,7 @@ func EnsureEnvironment() {
 	_ = os.MkdirAll(logDirPath, 0755)
 
 	fmt.Println("====================================================================")
-	fmt.Println("正在执行 VPS Sing-box 环境自检与部署保护...")
+	fmt.Println("正在执行 Chained Proxy 环境自检与部署保护...")
 
 	// 1. 若尚未安装基础框架，先执行基础部署或创建 systemd 服务
 	if !isSingboxInstalled() {
@@ -90,24 +90,23 @@ func EnsureEnvironment() {
 	fmt.Println("✅ 环境自检与防爆盘保护已完成！")
 }
 
-// installGlobalShortcut 将程序自身注册为 /usr/local/bin/vps 方便随时输入 vps 呼出菜单
+// installGlobalShortcut 将程序自身注册为 /usr/local/bin/vps 和 /usr/local/bin/chained-proxy
 func installGlobalShortcut() {
 	exe, err := os.Executable()
 	if err != nil {
 		return
 	}
 	exe, _ = filepath.EvalSymlinks(exe)
-	target := "/usr/local/bin/vps"
-	if exe == target {
-		return
-	}
 	data, err := os.ReadFile(exe)
 	if err != nil || len(data) == 0 {
 		return
 	}
-	if err := os.WriteFile(target, data, 0755); err == nil {
-		fmt.Println("💡 已注册全局快捷指令：今后在任意目录输入 vps 回车即可打开本管理菜单。")
+	for _, target := range []string{"/usr/local/bin/vps", "/usr/local/bin/chained-proxy"} {
+		if exe != target {
+			_ = os.WriteFile(target, data, 0755)
+		}
 	}
+	fmt.Println("💡 已注册全局快捷指令：今后在任意目录输入 vps 或 chained-proxy 回车即可打开本管理菜单。")
 }
 
 func isSingboxInstalled() bool {

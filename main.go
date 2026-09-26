@@ -26,7 +26,7 @@ func main() {
 
 		fmt.Println()
 		fmt.Println("====================================================================")
-		fmt.Println("              VPS Sing-box 节点管理 (服务端最新版)")
+		fmt.Println("              Chained Proxy 链式代理节点管理 (服务端版)")
 		fmt.Printf("  本机主IP: %s (共 %d 个公网IP) | 内核: v%s\n", primaryIP, maxInt(len(allIPs), 1), strings.TrimPrefix(ver, "v"))
 		fmt.Printf("  服务状态: %-22s | 当前节点数: %d\n", status, len(nodes))
 		fmt.Println("====================================================================")
@@ -54,7 +54,7 @@ func main() {
 		case "6":
 			handleMenuDeleteNodes(primaryIP)
 		case "0", "7", "q", "exit", "quit":
-			fmt.Println("👋 已退出 VPS 节点管理程序（后台 sing-box 服务保持运行）。")
+			fmt.Println("👋 已退出 Chained Proxy 节点管理程序（后台 sing-box 服务保持运行）。")
 			return
 		default:
 			fmt.Println("⚠️  无效的菜单选项，请输入 1 ~ 6，或输入 0 / 7 退出。")

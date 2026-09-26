@@ -1,6 +1,6 @@
-# VPS Sing-box 节点管理服务端 (Go 精简版)
+# Chained Proxy (链式代理节点管理服务端)
 
-专为 Linux VPS 服务器打造的极简、轻量、高可用 `sing-box` 节点管理运维工具（基于 Go 纯标准库开发，0 第三方依赖）。
+专为 Linux VPS 服务器打造的极简、轻量、高可用 `sing-box` 链式代理与多 IP 节点管理工具（基于 Go 纯标准库开发，0 第三方依赖）。
 
 ---
 
@@ -9,13 +9,16 @@
 在任何一台 Linux VPS（Ubuntu / Debian / CentOS / AlmaLinux / Alpine 等，支持 x86_64 及 ARM64）上，以 `root` 用户执行以下单行命令即可自动完成全部环境配置并打开交互菜单：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/santian666/vps-management/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh | bash
 ```
+*(备用地址：若仓库未重命名也可使用 `curl -fsSL https://raw.githubusercontent.com/santian666/vps-management/main/install.sh | bash`)*
 
 ### 💡 全局快捷命令
 程序运行后会自动向系统注册全局命令。今后无论您在哪个目录下，只要在终端输入：
 ```bash
 vps
+# 或者
+chained-proxy
 ```
 按下回车即可直接秒进管理菜单！
 
@@ -50,7 +53,7 @@ $$\text{清理超限缓存} \longrightarrow \text{sing-box check 语法校验} \
 
 ```text
 ====================================================================
-              VPS Sing-box 节点管理 (服务端最新版)
+              Chained Proxy 链式代理节点管理 (服务端版)
   本机主IP: 1.2.3.4 (共 3 个公网IP) | 内核: v1.12.x
   服务状态: 运行中 (active)         | 当前节点数: 12
 ====================================================================
@@ -173,8 +176,8 @@ $$\text{清理超限缓存} \longrightarrow \text{sing-box check 语法校验} \
 
 ```bash
 # 1. 克隆本仓库
-git clone https://github.com/santian666/vps-management.git
-cd vps-management
+git clone https://github.com/santian666/chained-proxy.git
+cd chained-proxy
 
 # 2. 运行自动化单元测试
 go test -v ./...
