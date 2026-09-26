@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -100,5 +102,155 @@ func TestSaveReloadAndModifySocks5Outbound(t *testing.T) {
 	}
 	if rem[0].NodeIP(primaryIP) != "103.45.67.91" {
 		t.Fatalf("unexpected remaining node IP: %s", rem[0].NodeIP(primaryIP))
+	}
+}
+
+func TestSocks5Parser(t *testing.T) {
+	input := []string{
+		"1.1.1.1:1080:user:pass",
+		"2.2.2.2:1081",
+		"socks5://user2:pass2@3.3.3.3:1082",
+		"socks://4.4.4.4:1083",
+		"  5.5.5.5:1084:u5:p5  ",
+		"",
+		"invalid-string",
+		"999.999.999.999:invalidport",
+	}
+	parsed := ParseSocks5Lines(input)
+	if len(parsed) != 5 {
+		t.Fatalf("expected 5 parsed socks endpoints, got %d", len(parsed))
+	}
+	if parsed[0].Host != "1.1.1.1" || parsed[0].Port != 1080 || parsed[0].Username != "user" || parsed[0].Password != "pass" {
+		t.Fatalf("unexpected parsed[0]: %+v", parsed[0])
+	}
+	if parsed[1].Host != "2.2.2.2" || parsed[1].Port != 1081 || parsed[1].Username != "" {
+		t.Fatalf("unexpected parsed[1]: %+v", parsed[1])
+	}
+	if parsed[2].Host != "3.3.3.3" || parsed[2].Port != 1082 || parsed[2].Username != "user2" || parsed[2].Password != "pass2" {
+		t.Fatalf("unexpected parsed[2]: %+v", parsed[2])
+	}
+	if parsed[3].Host != "4.4.4.4" || parsed[3].Port != 1083 {
+		t.Fatalf("unexpected parsed[3]: %+v", parsed[3])
+	}
+	if parsed[4].Host != "5.5.5.5" || parsed[4].Port != 1084 || parsed[4].Username != "u5" {
+		t.Fatalf("unexpected parsed[4]: %+v", parsed[4])
+	}
+}
+
+func TestDeleteFilterMultiModes(t *testing.T) {
+	primaryIP := "103.45.67.89"
+	n1 := BuildNewNode("vless-reality", "::", 20000, "", "direct", "", nil, primaryIP)
+	n2 := BuildNewNode("vless-reality", "::", 20001, "", "direct", "", nil, primaryIP)
+	n3 := BuildNewNode("vless-reality", "::", 20002, "", "socks", "", &Socks5Endpoint{Host: "8.8.8.8", Port: 1080}, primaryIP)
+	n4 := BuildNewNode("vless-reality", "::", 20003, "", "direct", "", nil, primaryIP)
+	n5 := BuildNewNode("vless-reality", "::", 20004, "", "direct", "", nil, primaryIP)
+	nodes := []ServerNode{n1, n2, n3, n4, n5}
+
+	// 1. 测试单个序号删除 "2"
+	rem, del := FilterDeleteNodes(nodes, "2", primaryIP)
+	if len(del) != 1 || len(rem) != 4 || del[0].ListenPort != 20001 {
+		t.Fatalf("delete index 2 failed: del=%d, rem=%d", len(del), len(rem))
+	}
+
+	// 2. 测试多序号删除 "1, 3"
+	rem, del = FilterDeleteNodes(nodes, "1, 3", primaryIP)
+	if len(del) != 2 || len(rem) != 3 {
+		t.Fatalf("delete multi indices failed: del=%d, rem=%d", len(del), len(rem))
+	}
+
+	// 3. 测试范围删除 "2-4"
+	rem, del = FilterDeleteNodes(nodes, "2-4", primaryIP)
+	if len(del) != 3 || len(rem) != 2 {
+		t.Fatalf("delete range 2-4 failed: del=%d, rem=%d", len(del), len(rem))
+	}
+
+	// 4. 测试按落地 IP 删除 "8.8.8.8"
+	rem, del = FilterDeleteNodes(nodes, "8.8.8.8", primaryIP)
+	if len(del) != 1 || len(rem) != 4 || del[0].SocksHost != "8.8.8.8" {
+		t.Fatalf("delete by socks IP failed: del=%d, rem=%d", len(del), len(rem))
+	}
+
+	// 5. 测试全部清空 "all"
+	rem, del = FilterDeleteNodes(nodes, "all", primaryIP)
+	if len(del) != 5 || len(rem) != 0 {
+		t.Fatalf("delete all failed: del=%d, rem=%d", len(del), len(rem))
+	}
+}
+
+func TestNextAvailableStartPort(t *testing.T) {
+	primaryIP := "103.45.67.89"
+	// 空列表默认 20000
+	if p := NextAvailableStartPort(nil, 5, 20000); p != 20000 {
+		t.Fatalf("expected 20000 on empty nodes, got %d", p)
+	}
+
+	// 占用 20000-20002
+	n1 := BuildNewNode("vless-reality", "::", 20000, "", "direct", "", nil, primaryIP)
+	n2 := BuildNewNode("vless-reality", "::", 20001, "", "direct", "", nil, primaryIP)
+	n3 := BuildNewNode("vless-reality", "::", 20002, "", "direct", "", nil, primaryIP)
+	nodes := []ServerNode{n1, n2, n3}
+
+	if p := NextAvailableStartPort(nodes, 2, 20000); p != 20003 {
+		t.Fatalf("expected 20003, got %d", p)
+	}
+}
+
+func TestAllJSONFormatAndValidation(t *testing.T) {
+	tmpDir := t.TempDir()
+	allPath := filepath.Join(tmpDir, "all.json")
+	bkDir := filepath.Join(tmpDir, "bk")
+	primaryIP := "1.2.3.4"
+
+	n1 := BuildNewNode("vless-reality", "::", 20000, "stock.adobe.com", "direct", "", nil, primaryIP)
+	n2 := BuildNewNode("anytls", "1.2.3.5", 20001, "bing.com", "direct", "1.2.3.5", nil, primaryIP)
+	n3 := BuildNewNode("socks", "::", 20002, "", "socks", "", &Socks5Endpoint{Host: "8.8.8.8", Port: 1080, Username: "u", Password: "p"}, primaryIP)
+
+	if err := SaveNodesToPath(allPath, bkDir, []ServerNode{n1, n2, n3}); err != nil {
+		t.Fatalf("SaveNodesToPath failed: %v", err)
+	}
+
+	data, err := os.ReadFile(allPath)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+
+	var root map[string]any
+	if err := json.Unmarshal(data, &root); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
+
+	// 验证 log 字段安全级别为 warn
+	logObj, ok := root["log"].(map[string]any)
+	if !ok || logObj["level"] != "warn" {
+		t.Fatalf("expected log level warn, got: %+v", logObj)
+	}
+
+	// 验证 inbounds / outbounds / route.rules 数量一致且一对一映射
+	inbounds, _ := root["inbounds"].([]any)
+	outbounds, _ := root["outbounds"].([]any)
+	route, _ := root["route"].(map[string]any)
+	rules, _ := route["rules"].([]any)
+
+	if len(inbounds) != 3 || len(outbounds) != 3 || len(rules) != 3 {
+		t.Fatalf("expected 3 inbounds/outbounds/rules, got %d/%d/%d", len(inbounds), len(outbounds), len(rules))
+	}
+
+	for i := 0; i < 3; i++ {
+		ib := inbounds[i].(map[string]any)
+		ob := outbounds[i].(map[string]any)
+		rule := rules[i].(map[string]any)
+		inTag := ib["tag"].(string)
+		outTag := ob["tag"].(string)
+
+		if outTag != inTag+"-out" {
+			t.Fatalf("outTag %s does not match inTag %s", outTag, inTag)
+		}
+		inList := rule["inbound"].([]any)
+		if len(inList) == 0 || inList[0].(string) != inTag {
+			t.Fatalf("rule inbound mismatch: %+v", rule)
+		}
+		if rule["outbound"].(string) != outTag {
+			t.Fatalf("rule outbound mismatch: %+v", rule)
+		}
 	}
 }

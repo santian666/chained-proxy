@@ -52,6 +52,7 @@ fi
 
 INSTALL_PATH="/usr/local/bin/vps"
 ALIAS_PATH="/usr/local/bin/chained-proxy"
+mkdir -p /usr/local/bin
 
 echo -e "${GREEN}正在从 GitHub 下载 Chained Proxy 最新版本...${PLAIN}"
 
