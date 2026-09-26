@@ -6,15 +6,46 @@
 
 ## ⚡ 一键极速安装与启动
 
-在任何一台 Linux VPS（Ubuntu / Debian / CentOS / AlmaLinux / Alpine 等，支持 x86_64 及 ARM64）上，以 `root` 用户执行以下单行命令即可自动完成全部环境配置并打开交互菜单：
+> [!NOTE]
+> **关于全新精简版服务器缺少 `curl` 的说明：**  
+> 部分云厂商提供的最小化 Linux 系统镜像（尤其是 **Debian / Ubuntu Minimal**）默认没有预装 `curl` 或 `wget`，直接运行安装命令可能会提示 `command not found: curl`。  
+> 若遇到该提示，请先执行下方对应系统的更新与安装命令：
+> ```bash
+> # Ubuntu / Debian 系统：
+> apt-get update -y && apt-get install -y curl wget
+> 
+> # CentOS / AlmaLinux / Rocky / RHEL 系统：
+> yum install -y curl wget || dnf install -y curl wget
+> 
+> # Alpine Linux 系统：
+> apk add --no-cache curl wget bash
+> ```
 
+---
+
+### 🚀 安装命令（三选一，复制即用）
+
+#### 选项 A：标准一键安装（推荐，使用 curl）
 ```bash
 curl -fsSL https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh | bash
 ```
-*(备用地址：若仓库未重命名也可使用 `curl -fsSL https://raw.githubusercontent.com/santian666/vps-management/main/install.sh | bash`)*
+
+#### 选项 B：免装 curl 直接安装（使用 wget，适用于系统已有 wget 的情况）
+```bash
+wget -qO- https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh | bash
+```
+
+#### 选项 C：全自动防呆一行流（自适应检测，缺少 curl 则自动更新 apt/yum 并安装，闭眼敲）
+```bash
+(command -v curl >/dev/null 2>&1 || (apt-get update -y && apt-get install -y curl || yum install -y curl)) && curl -fsSL https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh | bash
+```
+
+*(备用地址：若 GitHub 仓库名未变更也可将上方链接中的 `chained-proxy` 替换为 `vps-management`)*
+
+---
 
 ### 💡 全局快捷命令
-程序运行后会自动向系统注册全局命令。今后无论您在哪个目录下，只要在终端输入：
+程序运行后会自动向系统注册全局快捷命令。今后无论您在哪个目录下，只要在终端输入：
 ```bash
 vps
 # 或者
