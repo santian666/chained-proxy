@@ -231,6 +231,15 @@ func TestAllJSONFormatAndValidation(t *testing.T) {
 	route, _ := root["route"].(map[string]any)
 	rules, _ := route["rules"].([]any)
 
+	// 验证 dns 与 route.default_domain_resolver 兼容 sing-box 1.14+
+	dnsObj, ok := root["dns"].(map[string]any)
+	if !ok || dnsObj["servers"] == nil {
+		t.Fatalf("expected dns block, got: %+v", root["dns"])
+	}
+	if route["default_domain_resolver"] != "dns-direct" {
+		t.Fatalf("expected route.default_domain_resolver == 'dns-direct', got: %v", route["default_domain_resolver"])
+	}
+
 	if len(inbounds) != 3 || len(outbounds) != 3 || len(rules) != 3 {
 		t.Fatalf("expected 3 inbounds/outbounds/rules, got %d/%d/%d", len(inbounds), len(outbounds), len(rules))
 	}

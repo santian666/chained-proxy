@@ -316,10 +316,20 @@ func SaveNodesToPath(allJSONPath, backupDir string, nodes []ServerNode) error {
 			"output":    logFilePath,
 			"timestamp": true,
 		},
+		"dns": map[string]any{
+			"servers": []any{
+				map[string]any{
+					"tag":     "dns-direct",
+					"address": "local",
+					"detour":  "direct",
+				},
+			},
+		},
 		"inbounds":  inbounds,
 		"outbounds": outbounds,
 		"route": map[string]any{
-			"rules": rules,
+			"default_domain_resolver": "dns-direct",
+			"rules":                   rules,
 		},
 	}
 	return writeFormattedJSON(allJSONPath, all)

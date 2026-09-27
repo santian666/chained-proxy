@@ -295,6 +295,16 @@ func ensureBaseConfigFiles() {
 	_ = os.MkdirAll(singboxConfDir, 0755)
 	_ = os.MkdirAll(logDirPath, 0755)
 
+	dnsDirect := map[string]any{
+		"servers": []any{
+			map[string]any{
+				"tag":     "dns-direct",
+				"address": "local",
+				"detour":  "direct",
+			},
+		},
+	}
+
 	mainCfg := map[string]any{
 		"log": map[string]any{
 			"disabled":  false,
@@ -302,13 +312,28 @@ func ensureBaseConfigFiles() {
 			"output":    logFilePath,
 			"timestamp": true,
 		},
+		"dns":       dnsDirect,
 		"inbounds":  []any{},
 		"outbounds": []any{map[string]any{"tag": "direct", "type": "direct"}},
+		"route": map[string]any{
+			"default_domain_resolver": "dns-direct",
+			"rules":                   []any{},
+		},
 	}
 	if data, err := os.ReadFile(singboxMainConfig); err == nil && len(data) > 0 {
 		var parsed map[string]any
 		if json.Unmarshal(data, &parsed) == nil {
 			parsed["log"] = mainCfg["log"]
+			parsed["dns"] = dnsDirect
+			if parsed["route"] == nil {
+				parsed["route"] = map[string]any{}
+			}
+			if r, ok := parsed["route"].(map[string]any); ok {
+				r["default_domain_resolver"] = "dns-direct"
+				if r["rules"] == nil {
+					r["rules"] = []any{}
+				}
+			}
 			if out, ok := parsed["outbounds"].([]any); !ok || len(out) == 0 {
 				parsed["outbounds"] = mainCfg["outbounds"]
 			}
@@ -325,9 +350,13 @@ func ensureBaseConfigFiles() {
 				"output":    logFilePath,
 				"timestamp": true,
 			},
+			"dns":       dnsDirect,
 			"inbounds":  []any{},
 			"outbounds": []any{},
-			"route":     map[string]any{"rules": []any{}},
+			"route": map[string]any{
+				"default_domain_resolver": "dns-direct",
+				"rules":                   []any{},
+			},
 		}
 		_ = writeFormattedJSON(singboxAllJSON, initialAll)
 	}
@@ -359,11 +388,14 @@ WantedBy=multi-user.target
 
 	dropInDir := "/etc/systemd/system/sing-box.service.d"
 	_ = os.MkdirAll(dropInDir, 0755)
-	dropIn := `[Service]
+	// 使用 ExecStart= 强制清除官方包可能遗漏 -C 的默认参数，锁定必须加载 /etc/sing-box/conf
+	dropIn := fmt.Sprintf(`[Service]
+ExecStart=
+ExecStart=%s run -c %s -C %s
 LimitNOFILE=1048576
 StandardOutput=append:/var/log/sing-box/service.log
 StandardError=append:/var/log/sing-box/service.log
-`
+`, bin, singboxMainConfig, singboxConfDir)
 	_ = os.WriteFile(filepath.Join(dropInDir, "90-vps-management-log.conf"), []byte(dropIn), 0644)
 	runBashCommand("systemctl daemon-reload >/dev/null 2>&1 || true; systemctl enable sing-box >/dev/null 2>&1 || true", 15*time.Second)
 }
