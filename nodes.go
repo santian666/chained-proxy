@@ -571,7 +571,19 @@ func FilterDeleteNodes(nodes []ServerNode, expr string, primaryLocalIP string) (
 	return remaining, deleted
 }
 
-// NextAvailableStartPort 自动计算从 defaultStart (20000) 起的第一个连续空闲端口
+func isPortFreeOnHost(port int) bool {
+	if port <= 0 || port > 65535 {
+		return false
+	}
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return false
+	}
+	_ = ln.Close()
+	return true
+}
+
+// NextAvailableStartPort 自动计算从 defaultStart (20000) 起的第一个连续空闲端口（兼顾已建节点与宿主机物理占用）
 func NextAvailableStartPort(nodes []ServerNode, count int, defaultStart int) int {
 	if defaultStart <= 0 {
 		defaultStart = 20000
@@ -593,13 +605,24 @@ func NextAvailableStartPort(nodes []ServerNode, count int, defaultStart int) int
 	if maxPort >= defaultStart {
 		candidate = maxPort + 1
 	}
-	if candidate+count-1 <= 65535 {
-		return candidate
+	for candidate+count-1 <= 65535 {
+		ok := true
+		for i := 0; i < count; i++ {
+			p := candidate + i
+			if used[p] || !isPortFreeOnHost(p) {
+				ok = false
+				candidate = p + 1
+				break
+			}
+		}
+		if ok {
+			return candidate
+		}
 	}
 	for p := defaultStart; p <= 65535-count+1; p++ {
 		ok := true
 		for i := 0; i < count; i++ {
-			if used[p+i] {
+			if used[p+i] || !isPortFreeOnHost(p+i) {
 				ok = false
 				break
 			}

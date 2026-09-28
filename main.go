@@ -386,6 +386,7 @@ func handleMenuEditConfig() {
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			_ = cmd.Run()
+			stdinReader = bufio.NewReader(os.Stdin)
 		} else {
 			fmt.Println("ℹ️  当前非 Linux 终端，跳过外部编辑器调用。")
 		}
@@ -614,10 +615,7 @@ func readMultiLines() []string {
 		line, err := stdinReader.ReadString('\n')
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" {
-			if len(lines) > 0 || err != nil {
-				break
-			}
-			continue
+			break
 		}
 		lines = append(lines, trimmed)
 		if err != nil {

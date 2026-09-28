@@ -390,6 +390,7 @@ WantedBy=multi-user.target
 	_ = os.MkdirAll(dropInDir, 0755)
 	// 使用 ExecStart= 强制清除官方包可能遗漏 -C 的默认参数，锁定必须加载 /etc/sing-box/conf
 	dropIn := fmt.Sprintf(`[Service]
+LogsDirectory=sing-box
 ExecStart=
 ExecStart=%s run -c %s -C %s
 LimitNOFILE=1048576
