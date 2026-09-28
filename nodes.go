@@ -634,7 +634,7 @@ func NextAvailableStartPort(nodes []ServerNode, count int, defaultStart int) int
 	return defaultStart
 }
 
-// ParseSocks5Lines 解析多行 SOCKS5 输入（支持 ip:port:user:pass、ip:port、socks5://user:pass@ip:port）
+// ParseSocks5Lines 解析多行 SOCKS5 输入（支持一行一个、一行多个以空格/分号隔开、或者不同格式混杂）
 func ParseSocks5Lines(lines []string) []Socks5Endpoint {
 	var result []Socks5Endpoint
 	for _, line := range lines {
@@ -642,8 +642,18 @@ func ParseSocks5Lines(lines []string) []Socks5Endpoint {
 		if line == "" {
 			continue
 		}
-		if ep, ok := parseSingleSocks5(line); ok {
-			result = append(result, ep)
+		// 若单行内包含空格或分号隔开的多个节点，切分后逐一解析
+		tokens := strings.FieldsFunc(line, func(r rune) bool {
+			return r == ' ' || r == ';'
+		})
+		for _, tok := range tokens {
+			tok = strings.TrimSpace(tok)
+			if tok == "" {
+				continue
+			}
+			if ep, ok := parseSingleSocks5(tok); ok {
+				result = append(result, ep)
+			}
 		}
 	}
 	return result

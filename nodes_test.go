@@ -107,18 +107,20 @@ func TestSaveReloadAndModifySocks5Outbound(t *testing.T) {
 
 func TestSocks5Parser(t *testing.T) {
 	input := []string{
-		"1.1.1.1:1080:user:pass",
+		"1.1.1.1:1080:user:pass\r",
 		"2.2.2.2:1081",
 		"socks5://user2:pass2@3.3.3.3:1082",
 		"socks://4.4.4.4:1083",
 		"  5.5.5.5:1084:u5:p5  ",
 		"",
+		// 测试单行多个节点（空格与分号分隔）
+		"6.6.6.6:1085:u6:p6 7.7.7.7:1086; socks5://u8:p8@8.8.8.8:1087",
 		"invalid-string",
 		"999.999.999.999:invalidport",
 	}
 	parsed := ParseSocks5Lines(input)
-	if len(parsed) != 5 {
-		t.Fatalf("expected 5 parsed socks endpoints, got %d", len(parsed))
+	if len(parsed) != 8 {
+		t.Fatalf("expected 8 parsed socks endpoints, got %d", len(parsed))
 	}
 	if parsed[0].Host != "1.1.1.1" || parsed[0].Port != 1080 || parsed[0].Username != "user" || parsed[0].Password != "pass" {
 		t.Fatalf("unexpected parsed[0]: %+v", parsed[0])
@@ -134,6 +136,15 @@ func TestSocks5Parser(t *testing.T) {
 	}
 	if parsed[4].Host != "5.5.5.5" || parsed[4].Port != 1084 || parsed[4].Username != "u5" {
 		t.Fatalf("unexpected parsed[4]: %+v", parsed[4])
+	}
+	if parsed[5].Host != "6.6.6.6" || parsed[5].Port != 1085 || parsed[5].Username != "u6" || parsed[5].Password != "p6" {
+		t.Fatalf("unexpected parsed[5]: %+v", parsed[5])
+	}
+	if parsed[6].Host != "7.7.7.7" || parsed[6].Port != 1086 {
+		t.Fatalf("unexpected parsed[6]: %+v", parsed[6])
+	}
+	if parsed[7].Host != "8.8.8.8" || parsed[7].Port != 1087 || parsed[7].Username != "u8" || parsed[7].Password != "p8" {
+		t.Fatalf("unexpected parsed[7]: %+v", parsed[7])
 	}
 }
 

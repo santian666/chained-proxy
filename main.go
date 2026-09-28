@@ -118,7 +118,7 @@ func handleMenuAddNode(primaryIP string) {
 		}
 	} else {
 		// SOCKS5 落地出站模式
-		fmt.Println("\n请粘贴 SOCKS5 落地列表（每行一条 ip:port:user:pass 或 socks5://...，连续按两次回车结束）：")
+		fmt.Println("\n请粘贴 SOCKS5 落地列表（支持一行一条或直接多行批量粘贴，输入完成按【回车键】确认）：")
 		lines := readMultiLines()
 		socksList := ParseSocks5Lines(lines)
 		if len(socksList) == 0 {
@@ -275,7 +275,7 @@ func handleMenuModifySocks5Outbound(primaryIP string) {
 		return
 	}
 
-	fmt.Printf("当前共有 %d 个 SOCKS5 出站节点。请粘贴新的 SOCKS5 列表（每行一条 ip:port:user:pass，连续两次回车结束）：\n", socksCount)
+	fmt.Printf("当前共有 %d 个 SOCKS5 出站节点。请粘贴新的 SOCKS5 列表（支持一行一条或直接多行批量粘贴，输入完成按【回车键】确认）：\n", socksCount)
 	lines := readMultiLines()
 	updates := ParseSocks5Lines(lines)
 	if len(updates) == 0 {
@@ -615,6 +615,11 @@ func readMultiLines() []string {
 		line, err := stdinReader.ReadString('\n')
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" {
+			// 若当前缓冲区中仍有未读取的数据（用户一次性批量粘贴了包含空行的内容），跳过该空行并继续读取后续行
+			if stdinReader.Buffered() > 0 {
+				continue
+			}
+			// 缓冲区已空，且读取到空回车 -> 输入完成
 			break
 		}
 		lines = append(lines, trimmed)
