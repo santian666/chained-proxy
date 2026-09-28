@@ -14,6 +14,9 @@ import (
 var stdinReader = bufio.NewReader(os.Stdin)
 
 func main() {
+	// 0. 接管控制终端输入（防止因 curl | bash 管道传入导致 EOF 死循环与按键无法读取）
+	initTerminalStdin()
+
 	// 1. 启动时自动执行环境部署、升级最新 sing-box、自签名证书及 4 重日志防爆盘守护
 	EnsureEnvironment()
 
@@ -40,6 +43,9 @@ func main() {
 		fmt.Println("====================================================================")
 
 		choice := promptLine("请输入菜单选项 [0-7]: ")
+		if choice == "" {
+			continue
+		}
 		switch choice {
 		case "1":
 			handleMenuAddNode(primaryIP)
@@ -567,10 +573,39 @@ func resolveFriendlyEditor() string {
 	return "vi"
 }
 
+// initTerminalStdin 当检测到非控制终端时（例如通过 curl ... | bash 管道传入），自动接管 /dev/tty
+func initTerminalStdin() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+	fi, err := os.Stdin.Stat()
+	if err != nil || (fi.Mode()&os.ModeCharDevice) == 0 {
+		if tty, openErr := os.OpenFile("/dev/tty", os.O_RDWR, 0); openErr == nil {
+			os.Stdin = tty
+			stdinReader = bufio.NewReader(os.Stdin)
+		}
+	}
+}
+
 func promptLine(prompt string) string {
 	fmt.Print(prompt)
-	line, _ := stdinReader.ReadString('\n')
-	return strings.TrimSpace(line)
+	for {
+		line, err := stdinReader.ReadString('\n')
+		if err != nil {
+			// 若当前是非字符终端或读到了 EOF（管道被对端关闭）
+			if runtime.GOOS == "linux" {
+				if tty, openErr := os.OpenFile("/dev/tty", os.O_RDWR, 0); openErr == nil {
+					os.Stdin = tty
+					stdinReader = bufio.NewReader(os.Stdin)
+					continue
+				}
+			}
+			// 确属无可用交互终端（如非交互脚本或用户主动 Ctrl+D），安全退出，杜绝死循环刷屏
+			fmt.Println("\n👋 检测到输入流终止 (EOF)，退出程序。请在终端输入 vps 启动。")
+			os.Exit(0)
+		}
+		return strings.TrimSpace(line)
+	}
 }
 
 func readMultiLines() []string {

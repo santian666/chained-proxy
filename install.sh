@@ -87,4 +87,12 @@ echo -e "===================================================================="
 echo ""
 
 # 自动运行管理程序
-exec "$INSTALL_PATH"
+if [ -t 0 ]; then
+    # 当前已处于交互终端中
+    exec "$INSTALL_PATH"
+elif [ -e /dev/tty ]; then
+    # 通过管道 (curl ... | bash) 执行时，将标准输入重定向回终端 /dev/tty，防止输入流断开导致死循环与无法键入
+    exec "$INSTALL_PATH" </dev/tty
+else
+    echo -e "安装完成！请在终端输入 ${YELLOW}vps${PLAIN} 打开管理菜单。"
+fi

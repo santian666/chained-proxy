@@ -23,21 +23,26 @@
 
 ---
 
-### 🚀 安装命令（三选一，复制即用）
+### 🚀 安装命令（复制即用）
 
-#### 选项 A：标准一键安装（推荐，使用 curl）
+#### 方式一：极速一键安装（推荐，原生终端模式）
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh)"
+```
+
+#### 方式二：管道一键安装（兼容模式）
 ```bash
 curl -fsSL https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh | bash
 ```
 
-#### 选项 B：免装 curl 直接安装（使用 wget，适用于系统已有 wget 的情况）
+#### 方式三：使用 wget 直接安装（若系统预装了 wget）
 ```bash
-wget -qO- https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh | bash
+bash -c "$(wget -qO- https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh)"
 ```
 
-#### 选项 C：全自动防呆一行流（自适应检测，缺少 curl 则自动更新 apt/yum 并安装，闭眼敲）
+#### 方式四：全自动防呆一行流（自适应检测，缺少 curl/wget 自动更新 apt/yum 并安装）
 ```bash
-(command -v curl >/dev/null 2>&1 || (apt-get update -y && apt-get install -y curl || yum install -y curl)) && curl -fsSL https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh | bash
+(command -v curl >/dev/null 2>&1 || (apt-get update -y && apt-get install -y curl || yum install -y curl)) && bash -c "$(curl -fsSL https://raw.githubusercontent.com/santian666/chained-proxy/main/install.sh)"
 ```
 
 *(备用地址：若 GitHub 仓库名未变更也可将上方链接中的 `chained-proxy` 替换为 `vps-management`)*

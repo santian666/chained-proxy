@@ -298,9 +298,9 @@ func ensureBaseConfigFiles() {
 	dnsDirect := map[string]any{
 		"servers": []any{
 			map[string]any{
-				"tag":     "dns-direct",
-				"address": "local",
-				"detour":  "direct",
+				"tag":    "dns-direct",
+				"type":   "local",
+				"detour": "direct",
 			},
 		},
 	}
