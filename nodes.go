@@ -793,22 +793,57 @@ func probeSocks5(ep Socks5Endpoint, timeout time.Duration) bool {
 	return resp[1] == 0x00
 }
 
-// SaveTimestampedResultFile 将本次操作的节点结果独立保存到 /home/nodes_<动作>_YYYYMMDD_HHMMSS.txt
-func SaveTimestampedResultFile(actionLabel string, lines []string) (string, error) {
-	if len(lines) == 0 {
-		return "", errors.New("没有可保存的节点结果")
+// ExportAllNodesToFile 将服务器上的全部节点统一导出保存到单个文件 /home/nodes.txt（不按节点拆分，全部汇总于一个文件）
+func ExportAllNodesToFile(nodes []ServerNode, primaryIP string) (string, error) {
+	if len(nodes) == 0 {
+		return "", errors.New("当前没有任何节点可导出")
 	}
-	stamp := time.Now().Format("20060102_150405")
-	fileName := fmt.Sprintf("nodes_%s_%s.txt", actionLabel, stamp)
+	var lines []string
+	for _, n := range nodes {
+		lines = append(lines, n.DeliveryLine(primaryIP))
+	}
 	dir := "/home"
 	_ = os.MkdirAll(dir, 0755)
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 		dir, _ = os.Getwd()
 	}
-	fullPath := filepath.Join(dir, fileName)
+	fullPath := filepath.Join(dir, "nodes.txt")
 	content := strings.Join(lines, "\n") + "\n"
 	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
 		return "", err
+	}
+	// 清理历史按节点或批次残留的旧文件（nodes_*.txt），确保只保留唯一的 nodes.txt
+	for _, cleanupDir := range []string{dir, "/root"} {
+		if matches, err := filepath.Glob(filepath.Join(cleanupDir, "nodes_*.txt")); err == nil {
+			for _, m := range matches {
+				_ = os.Remove(m)
+			}
+		}
+	}
+	return fullPath, nil
+}
+
+// SaveTimestampedResultFile 兼容保留，同样统一汇入单文件 /home/nodes.txt 并清理碎片
+func SaveTimestampedResultFile(actionLabel string, lines []string) (string, error) {
+	if len(lines) == 0 {
+		return "", errors.New("没有可保存的节点结果")
+	}
+	dir := "/home"
+	_ = os.MkdirAll(dir, 0755)
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		dir, _ = os.Getwd()
+	}
+	fullPath := filepath.Join(dir, "nodes.txt")
+	content := strings.Join(lines, "\n") + "\n"
+	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+		return "", err
+	}
+	for _, cleanupDir := range []string{dir, "/root"} {
+		if matches, err := filepath.Glob(filepath.Join(cleanupDir, "nodes_*.txt")); err == nil {
+			for _, m := range matches {
+				_ = os.Remove(m)
+			}
+		}
 	}
 	return fullPath, nil
 }

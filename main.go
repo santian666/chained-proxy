@@ -339,9 +339,7 @@ func handleMenuNodeList(primaryIP string) {
 	for i, n := range nodes {
 		fmt.Println(n.ListViewLine(i+1, primaryIP))
 	}
-	fmt.Println("--------------------------------------------------------------------")
-
-	sub := promptLine("输入 [1] 输出并导出全部节点标准结果 (生成 /home/nodes_全部_时间戳.txt)，直接按 [回车] 返回主菜单: ")
+	sub := promptLine("输入 [1] 导出全部节点到单个文件 (/home/nodes.txt)，直接按 [回车] 返回主菜单: ")
 	if strings.TrimSpace(sub) == "1" {
 		printAndSaveOperationNodes("全部", nodes, primaryIP)
 	}
@@ -481,7 +479,13 @@ func handleMenuDeleteNodes(primaryIP string) {
 		return
 	}
 
-	fmt.Printf("✅ 已成功删除 %d 个节点（剩余 %d 个节点）！\n", len(deleted), len(remaining))
+	if len(remaining) > 0 {
+		_, _ = ExportAllNodesToFile(remaining, primaryIP)
+	} else {
+		_ = os.Remove("/home/nodes.txt")
+	}
+
+	fmt.Printf("✅ 已成功删除 %d 个节点（剩余 %d 个节点，已同步更新 /home/nodes.txt）！\n", len(deleted), len(remaining))
 	// 强制重启一次 sing-box 生效
 	ApplyAndRestartSingbox("6.删除节点")
 }
@@ -543,19 +547,29 @@ func printAndSaveOperationNodes(actionLabel string, nodes []ServerNode, primaryI
 	if len(nodes) == 0 {
 		return
 	}
-	var lines []string
 	fmt.Printf("\n================ [ 本次%s节点输出结果 (%d个) ] ================\n", actionLabel, len(nodes))
 	for _, n := range nodes {
-		line := n.DeliveryLine(primaryIP)
-		lines = append(lines, line)
-		fmt.Println(line)
+		fmt.Println(n.DeliveryLine(primaryIP))
 	}
 	fmt.Println("====================================================================")
 
-	if savedPath, err := SaveTimestampedResultFile(actionLabel, lines); err == nil {
-		fmt.Printf("📁 本次操作的 %d 条节点结果已独立保存至: %s\n", len(lines), savedPath)
+	// 统一获取服务器当前全部节点，确保所有节点全部汇总在唯一的 /home/nodes.txt 单个文件中，绝不按节点分散保存
+	allNodes, err := LoadCurrentNodes()
+	if err != nil || len(allNodes) == 0 {
+		allNodes = nodes
+	}
+	if savedPath, err := ExportAllNodesToFile(allNodes, primaryIP); err == nil {
+		fmt.Printf("📁 服务器全部 %d 个节点已统一汇总导出至单个文件: %s（所有节点均在此文件中，无多余分散文件）\n", len(allNodes), savedPath)
 	} else {
-		fmt.Printf("⚠️  保存结果文件失败: %v\n", err)
+		var lines []string
+		for _, n := range allNodes {
+			lines = append(lines, n.DeliveryLine(primaryIP))
+		}
+		if savedPath, err := SaveTimestampedResultFile(actionLabel, lines); err == nil {
+			fmt.Printf("📁 全部节点已保存至单个文件: %s\n", savedPath)
+		} else {
+			fmt.Printf("⚠️  保存结果文件失败: %v\n", err)
+		}
 	}
 }
 

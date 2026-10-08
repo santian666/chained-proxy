@@ -283,7 +283,7 @@ func TestSaveTimestampedResultFile(t *testing.T) {
 	}
 	defer os.Remove(savedPath)
 
-	if !strings.Contains(savedPath, "nodes_测试_") {
+	if !strings.HasSuffix(savedPath, "nodes.txt") {
 		t.Fatalf("unexpected savedPath: %s", savedPath)
 	}
 	data, err := os.ReadFile(savedPath)
@@ -292,6 +292,45 @@ func TestSaveTimestampedResultFile(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "1.2.3.4----vless://test1") {
 		t.Fatalf("unexpected content: %s", string(data))
+	}
+}
+
+func TestExportAllNodesToFile(t *testing.T) {
+	nodes := []ServerNode{
+		{
+			InboundType: "vless-reality",
+			ListenPort:  20001,
+			UUID:        "uuid-1",
+			PublicKey:   "pubkey-1",
+			ShortID:     "sid-1",
+			ServerName:  "stock.adobe.com",
+		},
+		{
+			InboundType: "socks",
+			ListenPort:  20002,
+			Username:    "u1",
+			Password:    "p1",
+		},
+	}
+	savedPath, err := ExportAllNodesToFile(nodes, "1.2.3.4")
+	if err != nil {
+		t.Fatalf("ExportAllNodesToFile failed: %v", err)
+	}
+	defer os.Remove(savedPath)
+
+	if !strings.HasSuffix(savedPath, "nodes.txt") {
+		t.Fatalf("unexpected savedPath: %s", savedPath)
+	}
+	data, err := os.ReadFile(savedPath)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	str := string(data)
+	if !strings.Contains(str, "1.2.3.4----vless://") {
+		t.Fatalf("missing vless in content: %s", str)
+	}
+	if !strings.Contains(str, "1.2.3.4----1.2.3.4:20002:u1:p1") {
+		t.Fatalf("missing socks in content: %s", str)
 	}
 }
 
