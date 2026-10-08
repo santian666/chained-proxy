@@ -283,7 +283,7 @@ func TestSaveTimestampedResultFile(t *testing.T) {
 	}
 	defer os.Remove(savedPath)
 
-	if !strings.HasSuffix(savedPath, "nodes.txt") {
+	if !strings.Contains(savedPath, "nodes_") {
 		t.Fatalf("unexpected savedPath: %s", savedPath)
 	}
 	data, err := os.ReadFile(savedPath)
@@ -312,16 +312,20 @@ func TestExportAllNodesToFile(t *testing.T) {
 			Password:    "p1",
 		},
 	}
-	savedPath, err := ExportAllNodesToFile(nodes, "1.2.3.4")
+	timePath, fixedPath, err := ExportAllNodesToFile(nodes, "1.2.3.4")
 	if err != nil {
 		t.Fatalf("ExportAllNodesToFile failed: %v", err)
 	}
-	defer os.Remove(savedPath)
+	defer os.Remove(timePath)
+	defer os.Remove(fixedPath)
 
-	if !strings.HasSuffix(savedPath, "nodes.txt") {
-		t.Fatalf("unexpected savedPath: %s", savedPath)
+	if !strings.Contains(timePath, "nodes_") {
+		t.Fatalf("unexpected timePath: %s", timePath)
 	}
-	data, err := os.ReadFile(savedPath)
+	if !strings.HasSuffix(fixedPath, "nodes.txt") {
+		t.Fatalf("unexpected fixedPath: %s", fixedPath)
+	}
+	data, err := os.ReadFile(timePath)
 	if err != nil {
 		t.Fatalf("ReadFile failed: %v", err)
 	}

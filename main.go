@@ -339,7 +339,7 @@ func handleMenuNodeList(primaryIP string) {
 	for i, n := range nodes {
 		fmt.Println(n.ListViewLine(i+1, primaryIP))
 	}
-	sub := promptLine("输入 [1] 导出全部节点到单个文件 (/home/nodes.txt)，直接按 [回车] 返回主菜单: ")
+	sub := promptLine("输入 [1] 导出全部节点到单个文件 (生成带时间戳归档及 /home/nodes.txt)，直接按 [回车] 返回主菜单: ")
 	if strings.TrimSpace(sub) == "1" {
 		printAndSaveOperationNodes("全部", nodes, primaryIP)
 	}
@@ -480,7 +480,7 @@ func handleMenuDeleteNodes(primaryIP string) {
 	}
 
 	if len(remaining) > 0 {
-		_, _ = ExportAllNodesToFile(remaining, primaryIP)
+		_, _, _ = ExportAllNodesToFile(remaining, primaryIP)
 	} else {
 		_ = os.Remove("/home/nodes.txt")
 	}
@@ -553,13 +553,15 @@ func printAndSaveOperationNodes(actionLabel string, nodes []ServerNode, primaryI
 	}
 	fmt.Println("====================================================================")
 
-	// 统一获取服务器当前全部节点，确保所有节点全部汇总在唯一的 /home/nodes.txt 单个文件中，绝不按节点分散保存
+	// 统一获取服务器当前全部节点，确保所有节点全部汇总在单文件中，绝不按节点分散保存
 	allNodes, err := LoadCurrentNodes()
 	if err != nil || len(allNodes) == 0 {
 		allNodes = nodes
 	}
-	if savedPath, err := ExportAllNodesToFile(allNodes, primaryIP); err == nil {
-		fmt.Printf("📁 服务器全部 %d 个节点已统一汇总导出至单个文件: %s（所有节点均在此文件中，无多余分散文件）\n", len(allNodes), savedPath)
+	if timePath, fixedPath, err := ExportAllNodesToFile(allNodes, primaryIP); err == nil {
+		fmt.Printf("📁 服务器全部 %d 个节点已统一汇总导出至单个文件（所有节点均在此文件中，绝不分散）：\n", len(allNodes))
+		fmt.Printf("   👉 带时间戳文件: %s （文件名自带导出时间，一眼分辨导出批次）\n", timePath)
+		fmt.Printf("   👉 最新全量文件: %s （固定最新全量副本）\n", fixedPath)
 	} else {
 		var lines []string
 		for _, n := range allNodes {
