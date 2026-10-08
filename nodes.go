@@ -320,8 +320,17 @@ func SaveNodesToPath(allJSONPath, backupDir string, nodes []ServerNode) error {
 			"servers": []any{
 				map[string]any{
 					"tag":    "dns-direct",
-					"type":   "local",
-					"detour": "direct",
+					"type":   "udp",
+					"server": "8.8.8.8",
+				},
+				map[string]any{
+					"tag":    "dns-backup",
+					"type":   "udp",
+					"server": "1.1.1.1",
+				},
+				map[string]any{
+					"tag":  "dns-local",
+					"type": "local",
 				},
 			},
 		},

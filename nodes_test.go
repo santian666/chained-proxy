@@ -294,3 +294,13 @@ func TestSaveTimestampedResultFile(t *testing.T) {
 		t.Fatalf("unexpected content: %s", string(data))
 	}
 }
+
+func TestRealityKeyDerivation(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		priv, pub := realityKeyPair()
+		derived := realityPublicKeyFromPrivate(priv)
+		if pub != derived {
+			t.Fatalf("mismatch: pub=%s, derived=%s", pub, derived)
+		}
+	}
+}
