@@ -274,3 +274,23 @@ func TestAllJSONFormatAndValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestSaveTimestampedResultFile(t *testing.T) {
+	lines := []string{"1.2.3.4----vless://test1", "5.6.7.8----vless://test2"}
+	savedPath, err := SaveTimestampedResultFile("测试", lines)
+	if err != nil {
+		t.Fatalf("SaveTimestampedResultFile failed: %v", err)
+	}
+	defer os.Remove(savedPath)
+
+	if !strings.Contains(savedPath, "nodes_测试_") {
+		t.Fatalf("unexpected savedPath: %s", savedPath)
+	}
+	data, err := os.ReadFile(savedPath)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if !strings.Contains(string(data), "1.2.3.4----vless://test1") {
+		t.Fatalf("unexpected content: %s", string(data))
+	}
+}

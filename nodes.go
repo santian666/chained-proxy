@@ -784,14 +784,15 @@ func probeSocks5(ep Socks5Endpoint, timeout time.Duration) bool {
 	return resp[1] == 0x00
 }
 
-// SaveTimestampedResultFile 将本次操作的节点结果独立保存到 /root/nodes_<动作>_YYYYMMDD_HHMMSS.txt
+// SaveTimestampedResultFile 将本次操作的节点结果独立保存到 /home/nodes_<动作>_YYYYMMDD_HHMMSS.txt
 func SaveTimestampedResultFile(actionLabel string, lines []string) (string, error) {
 	if len(lines) == 0 {
 		return "", errors.New("没有可保存的节点结果")
 	}
 	stamp := time.Now().Format("20060102_150405")
 	fileName := fmt.Sprintf("nodes_%s_%s.txt", actionLabel, stamp)
-	dir := "/root"
+	dir := "/home"
+	_ = os.MkdirAll(dir, 0755)
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 		dir, _ = os.Getwd()
 	}

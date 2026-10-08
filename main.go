@@ -341,7 +341,7 @@ func handleMenuNodeList(primaryIP string) {
 	}
 	fmt.Println("--------------------------------------------------------------------")
 
-	sub := promptLine("输入 [1] 输出并导出全部节点标准结果 (生成 /root/nodes_全部_时间戳.txt)，直接按 [回车] 返回主菜单: ")
+	sub := promptLine("输入 [1] 输出并导出全部节点标准结果 (生成 /home/nodes_全部_时间戳.txt)，直接按 [回车] 返回主菜单: ")
 	if strings.TrimSpace(sub) == "1" {
 		printAndSaveOperationNodes("全部", nodes, primaryIP)
 	}

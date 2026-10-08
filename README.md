@@ -123,7 +123,7 @@ $$\text{清理超限缓存} \longrightarrow \text{sing-box check 语法校验} \
      * 输出格式：`完整socks5----协议链接`（如 `9.9.9.9:1080:user:pass----vless://...#9.9.9.9`）。
 * **自动生效与独立文件留存**：
   * 自动重启 `sing-box` 使配置生效。
-  * 终端打印本次生成的结果，并独立保存至 `/root/nodes_新增_YYYYMMDD_HHMMSS.txt`。
+  * 终端打印本次生成的结果，并独立保存至 `/home/nodes_新增_YYYYMMDD_HHMMSS.txt`。
 
 ---
 
@@ -136,7 +136,7 @@ $$\text{清理超限缓存} \longrightarrow \text{sing-box check 语法校验} \
   2. 优先提供“仅未创建节点的 IP”选项，避免重复创建。
   3. 选择入站协议（`VLESS-Reality` / `AnyTLS` / `SOCKS5`）。
   4. 设置起始端口（回车默认 20000 起连续顺延）。
-  5. 自动重启生效，终端按 `本机IP----协议链接` 逐行输出，并独立保存至 `/root/nodes_多IP_YYYYMMDD_HHMMSS.txt`。
+  5. 自动重启生效，终端按 `本机IP----协议链接` 逐行输出，并独立保存至 `/home/nodes_多IP_YYYYMMDD_HHMMSS.txt`。
 
 ---
 
@@ -148,7 +148,7 @@ $$\text{清理超限缓存} \longrightarrow \text{sing-box check 语法校验} \
   1. 直接粘贴新购买或变更后的 SOCKS5 列表（每行一条 `ip:port:user:pass`）。
   2. 程序自动提取每行 SOCKS5 的 **IP**，在现有出站为 SOCKS5 的节点中寻找相同 IP 的节点。
   3. **原地更新其出站 `server_port`（端口）、`username`（账号）、`password`（密码）**。
-  4. 自动重启生效，打印匹配成功的数量及更新后的 `完整新socks5----原协议链接`，并保存至 `/root/nodes_改落地_YYYYMMDD_HHMMSS.txt`。
+  4. 自动重启生效，打印匹配成功的数量及更新后的 `完整新socks5----原协议链接`，并保存至 `/home/nodes_改落地_YYYYMMDD_HHMMSS.txt`。
 
 ---
 
@@ -164,7 +164,7 @@ $$\text{清理超限缓存} \longrightarrow \text{sing-box check 语法校验} \
   * 严格按 **`节点序号---节点IP----协议`** 输出。
   * 直连节点的“节点IP”显示为本机 IP，SOCKS5 出站节点的“节点IP”显示为对应的 SOCKS5 落地 IP。
 * **全量导出支持**：
-  * 输入 `1` 回车：在屏幕输出服务器上**全部节点**的标准交付格式，并自动生成带时间戳的全量备份文件 `/root/nodes_全部_YYYYMMDD_HHMMSS.txt`。
+  * 输入 `1` 回车：在屏幕输出服务器上**全部节点**的标准交付格式，并自动生成带时间戳的全量备份文件 `/home/nodes_全部_YYYYMMDD_HHMMSS.txt`。
   * 直接按回车：返回主菜单（退出前同样自动执行一次重启检查确保服务活跃）。
 
 ---
@@ -199,10 +199,10 @@ $$\text{清理超限缓存} \longrightarrow \text{sing-box check 语法校验} \
 
 | 触发操作 | 自动生成的文件路径 | 文件内部格式 |
 | :--- | :--- | :--- |
-| **菜单 1 新增节点** | `/root/nodes_新增_YYYYMMDD_HHMMSS.txt` | 直连: `本机IP----协议`<br>SOCKS: `完整socks5----协议` |
-| **菜单 2 新增多IP节点** | `/root/nodes_多IP_YYYYMMDD_HHMMSS.txt` | `本机IP----协议` |
-| **菜单 3 修改落地** | `/root/nodes_改落地_YYYYMMDD_HHMMSS.txt` | `完整新socks5----协议` |
-| **菜单 4 导出全部** | `/root/nodes_全部_YYYYMMDD_HHMMSS.txt` | 全量标准交付行 |
+| **菜单 1 新增节点** | `/home/nodes_新增_YYYYMMDD_HHMMSS.txt` | 直连: `本机IP----协议`<br>SOCKS: `完整socks5----协议` |
+| **菜单 2 新增多IP节点** | `/home/nodes_多IP_YYYYMMDD_HHMMSS.txt` | `本机IP----协议` |
+| **菜单 3 修改落地** | `/home/nodes_改落地_YYYYMMDD_HHMMSS.txt` | `完整新socks5----协议` |
+| **菜单 4 导出全部** | `/home/nodes_全部_YYYYMMDD_HHMMSS.txt` | 全量标准交付行 |
 
 ---
 
