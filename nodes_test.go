@@ -312,20 +312,16 @@ func TestExportAllNodesToFile(t *testing.T) {
 			Password:    "p1",
 		},
 	}
-	timePath, fixedPath, err := ExportAllNodesToFile(nodes, "1.2.3.4")
+	savedPath, err := ExportAllNodesToFile(nodes, "1.2.3.4")
 	if err != nil {
 		t.Fatalf("ExportAllNodesToFile failed: %v", err)
 	}
-	defer os.Remove(timePath)
-	defer os.Remove(fixedPath)
+	defer os.Remove(savedPath)
 
-	if !strings.Contains(timePath, "nodes_") {
-		t.Fatalf("unexpected timePath: %s", timePath)
+	if !strings.Contains(savedPath, "nodes_") {
+		t.Fatalf("unexpected savedPath: %s", savedPath)
 	}
-	if !strings.HasSuffix(fixedPath, "nodes.txt") {
-		t.Fatalf("unexpected fixedPath: %s", fixedPath)
-	}
-	data, err := os.ReadFile(timePath)
+	data, err := os.ReadFile(savedPath)
 	if err != nil {
 		t.Fatalf("ReadFile failed: %v", err)
 	}

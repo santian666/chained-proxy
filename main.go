@@ -339,7 +339,7 @@ func handleMenuNodeList(primaryIP string) {
 	for i, n := range nodes {
 		fmt.Println(n.ListViewLine(i+1, primaryIP))
 	}
-	sub := promptLine("输入 [1] 导出全部节点到单个文件 (生成带时间戳归档及 /home/nodes.txt)，直接按 [回车] 返回主菜单: ")
+	sub := promptLine("输入 [1] 导出全部节点到单个时间戳文件 (/home/nodes_时间戳.txt)，直接按 [回车] 返回主菜单: ")
 	if strings.TrimSpace(sub) == "1" {
 		printAndSaveOperationNodes("全部", nodes, primaryIP)
 	}
@@ -480,12 +480,11 @@ func handleMenuDeleteNodes(primaryIP string) {
 	}
 
 	if len(remaining) > 0 {
-		_, _, _ = ExportAllNodesToFile(remaining, primaryIP)
+		savedPath, _ := ExportAllNodesToFile(remaining, primaryIP)
+		fmt.Printf("✅ 已成功删除 %d 个节点（剩余 %d 个节点，已保存至: %s）！\n", len(deleted), len(remaining), savedPath)
 	} else {
-		_ = os.Remove("/home/nodes.txt")
+		fmt.Printf("✅ 已成功删除 %d 个节点（剩余 0 个节点）！\n", len(deleted))
 	}
-
-	fmt.Printf("✅ 已成功删除 %d 个节点（剩余 %d 个节点，已同步更新 /home/nodes.txt）！\n", len(deleted), len(remaining))
 	// 强制重启一次 sing-box 生效
 	ApplyAndRestartSingbox("6.删除节点")
 }
@@ -553,22 +552,20 @@ func printAndSaveOperationNodes(actionLabel string, nodes []ServerNode, primaryI
 	}
 	fmt.Println("====================================================================")
 
-	// 统一获取服务器当前全部节点，确保所有节点全部汇总在单文件中，绝不按节点分散保存
+	// 统一获取服务器当前全部节点，确保所有节点全部汇总在唯一的单文件中，绝不按节点分散保存
 	allNodes, err := LoadCurrentNodes()
 	if err != nil || len(allNodes) == 0 {
 		allNodes = nodes
 	}
-	if timePath, fixedPath, err := ExportAllNodesToFile(allNodes, primaryIP); err == nil {
-		fmt.Printf("📁 服务器全部 %d 个节点已统一汇总导出至单个文件（所有节点均在此文件中，绝不分散）：\n", len(allNodes))
-		fmt.Printf("   👉 带时间戳文件: %s （文件名自带导出时间，一眼分辨导出批次）\n", timePath)
-		fmt.Printf("   👉 最新全量文件: %s （固定最新全量副本）\n", fixedPath)
+	if savedPath, err := ExportAllNodesToFile(allNodes, primaryIP); err == nil {
+		fmt.Printf("📁 服务器全部 %d 个节点已统一导出至单个时间戳文件: %s（所有节点均在此文件中，绝不分散）\n", len(allNodes), savedPath)
 	} else {
 		var lines []string
 		for _, n := range allNodes {
 			lines = append(lines, n.DeliveryLine(primaryIP))
 		}
 		if savedPath, err := SaveTimestampedResultFile(actionLabel, lines); err == nil {
-			fmt.Printf("📁 全部节点已保存至单个文件: %s\n", savedPath)
+			fmt.Printf("📁 全部节点已保存至文件: %s\n", savedPath)
 		} else {
 			fmt.Printf("⚠️  保存结果文件失败: %v\n", err)
 		}

@@ -793,11 +793,11 @@ func probeSocks5(ep Socks5Endpoint, timeout time.Duration) bool {
 	return resp[1] == 0x00
 }
 
-// ExportAllNodesToFile 将服务器上的全部节点统一导出保存到单文件中（全部节点集中在同一个文件中，绝不按节点分散保存）
-// 每次导出生成带明确时间戳的单个全量文件（如 /home/nodes_20261008_184850.txt），同时同步刷新固定最新文件 /home/nodes.txt
-func ExportAllNodesToFile(nodes []ServerNode, primaryIP string) (string, string, error) {
+// ExportAllNodesToFile 将服务器上的全部节点统一导出保存到单个带时间戳的文件 /home/nodes_YYYYMMDD_HHMMSS.txt
+// 每次导出生成唯一的时间戳文件，全部节点完整汇总在同一个文件中，绝不按节点分散拆分
+func ExportAllNodesToFile(nodes []ServerNode, primaryIP string) (string, error) {
 	if len(nodes) == 0 {
-		return "", "", errors.New("当前没有任何节点可导出")
+		return "", errors.New("当前没有任何节点可导出")
 	}
 	var lines []string
 	for _, n := range nodes {
@@ -811,18 +811,18 @@ func ExportAllNodesToFile(nodes []ServerNode, primaryIP string) (string, string,
 	stamp := time.Now().Format("20060102_150405")
 	timeFileName := fmt.Sprintf("nodes_%s.txt", stamp)
 	timeFullPath := filepath.Join(dir, timeFileName)
-	fixedFullPath := filepath.Join(dir, "nodes.txt")
 	content := strings.Join(lines, "\n") + "\n"
 
 	if err := os.WriteFile(timeFullPath, []byte(content), 0644); err != nil {
-		return "", "", err
+		return "", err
 	}
-	_ = os.WriteFile(fixedFullPath, []byte(content), 0644)
+	// 移除可能存在的固定 nodes.txt
+	_ = os.Remove(filepath.Join(dir, "nodes.txt"))
 
-	return timeFullPath, fixedFullPath, nil
+	return timeFullPath, nil
 }
 
-// SaveTimestampedResultFile 兼容保留，同样统一汇入单文件（带时间戳 + 固定 nodes.txt）
+// SaveTimestampedResultFile 兼容保留，导出为单个带时间戳的文件
 func SaveTimestampedResultFile(actionLabel string, lines []string) (string, error) {
 	if len(lines) == 0 {
 		return "", errors.New("没有可保存的节点结果")
@@ -835,12 +835,11 @@ func SaveTimestampedResultFile(actionLabel string, lines []string) (string, erro
 	stamp := time.Now().Format("20060102_150405")
 	timeFileName := fmt.Sprintf("nodes_%s.txt", stamp)
 	timeFullPath := filepath.Join(dir, timeFileName)
-	fixedFullPath := filepath.Join(dir, "nodes.txt")
 	content := strings.Join(lines, "\n") + "\n"
 	if err := os.WriteFile(timeFullPath, []byte(content), 0644); err != nil {
 		return "", err
 	}
-	_ = os.WriteFile(fixedFullPath, []byte(content), 0644)
+	_ = os.Remove(filepath.Join(dir, "nodes.txt"))
 	return timeFullPath, nil
 }
 
