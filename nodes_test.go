@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestBuildAndFormatDirectAndSocksNodes(t *testing.T) {
@@ -242,10 +245,9 @@ func TestAllJSONFormatAndValidation(t *testing.T) {
 	route, _ := root["route"].(map[string]any)
 	rules, _ := route["rules"].([]any)
 
-	// 验证 dns 与 route.default_domain_resolver 兼容 sing-box 1.14+
-	dnsObj, ok := root["dns"].(map[string]any)
-	if !ok || dnsObj["servers"] == nil {
-		t.Fatalf("expected dns block, got: %+v", root["dns"])
+	// 验证 route.default_domain_resolver 兼容 sing-box 1.14+，且 all.json 不含重复 dns 块
+	if root["dns"] != nil {
+		t.Fatalf("all.json should not contain redundant dns block to prevent duplicate DNS server tag conflict")
 	}
 	if route["default_domain_resolver"] != "dns-direct" {
 		t.Fatalf("expected route.default_domain_resolver == 'dns-direct', got: %v", route["default_domain_resolver"])
@@ -343,3 +345,101 @@ func TestRealityKeyDerivation(t *testing.T) {
 		}
 	}
 }
+
+func TestSingboxLiveMergeAndRun(t *testing.T) {
+	sbExe, err := exec.LookPath("./sing-box.exe")
+	if err != nil {
+		t.Skip("sing-box.exe not found locally, skipping live test")
+	}
+
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "conf")
+	_ = os.MkdirAll(confDir, 0755)
+	mainConfigPath := filepath.Join(tmpDir, "config.json")
+	allJSONPath := filepath.Join(confDir, "all.json")
+
+	// 1. 生成 mainConfig
+	dnsDirect := map[string]any{
+		"servers": []any{
+			map[string]any{"tag": "dns-direct", "type": "udp", "server": "8.8.8.8"},
+			map[string]any{"tag": "dns-backup", "type": "udp", "server": "1.1.1.1"},
+			map[string]any{"tag": "dns-local", "type": "local"},
+		},
+	}
+	mainCfg := map[string]any{
+		"log":       map[string]any{"disabled": false, "level": "warn"},
+		"dns":       dnsDirect,
+		"inbounds":  []any{},
+		"outbounds": []any{map[string]any{"tag": "direct", "type": "direct"}},
+		"route": map[string]any{
+			"default_domain_resolver": "dns-direct",
+			"rules":                   []any{},
+		},
+	}
+	mainData, _ := json.MarshalIndent(mainCfg, "", "  ")
+	_ = os.WriteFile(mainConfigPath, mainData, 0644)
+
+	// 2. 第一次添加节点 (SOCKS5 落地) - 直接调用 SaveNodesToPath
+	ep1 := &Socks5Endpoint{Host: "96.62.143.16", Port: 1080, Username: "u1", Password: "p1"}
+	n1 := BuildNewNode("vless-reality", "127.0.0.1", 30001, "stock.adobe.com", "socks", "", ep1, "127.0.0.1")
+	if err := SaveNodesToPath(allJSONPath, "", []ServerNode{n1}); err != nil {
+		t.Fatalf("SaveNodesToPath 1 failed: %v", err)
+	}
+
+	// 运行 check 1
+	cmd := exec.Command(sbExe, "check", "-c", mainConfigPath, "-C", confDir)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("sing-box check 1 failed: %v\nOutput:\n%s", err, string(out))
+	}
+	t.Logf("sing-box check 1 passed successfully!")
+
+	// 3. 第二次添加节点 (另一个 SOCKS5 落地) - 模拟用户第二次从面板进入添加节点
+	loaded, err := LoadNodesFromPath(allJSONPath)
+	if err != nil || len(loaded) != 1 {
+		t.Fatalf("LoadNodesFromPath failed: %v, len=%d", err, len(loaded))
+	}
+	ep2 := &Socks5Endpoint{Host: "185.145.241.136", Port: 1080, Username: "u2", Password: "p2"}
+	n2 := BuildNewNode("vless-reality", "127.0.0.1", 30002, "stock.adobe.com", "socks", "", ep2, "127.0.0.1")
+	allNodes := append(loaded, n2)
+	if err := SaveNodesToPath(allJSONPath, "", allNodes); err != nil {
+		t.Fatalf("SaveNodesToPath 2 failed: %v", err)
+	}
+
+	// 运行 check 2
+	cmd2 := exec.Command(sbExe, "check", "-c", mainConfigPath, "-C", confDir)
+	out2, err := cmd2.CombinedOutput()
+	if err != nil {
+		t.Fatalf("sing-box check 2 failed: %v\nOutput:\n%s", err, string(out2))
+	}
+	t.Logf("sing-box check 2 passed successfully!")
+
+	// 4. 真实运行 sing-box run 验证 2 个节点同时在线且无运行时 DNS 报错
+	var runBuf strings.Builder
+	runCmd := exec.Command(sbExe, "run", "-c", mainConfigPath, "-C", confDir)
+	runCmd.Stdout = &runBuf
+	runCmd.Stderr = &runBuf
+	if err := runCmd.Start(); err != nil {
+		t.Fatalf("sing-box run failed to start: %v", err)
+	}
+	defer func() {
+		_ = runCmd.Process.Kill()
+	}()
+
+	// 监听端口是否成功打开
+	var connected bool
+	for i := 0; i < 20; i++ {
+		time.Sleep(100 * time.Millisecond)
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:30002", 200*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			connected = true
+			break
+		}
+	}
+	if !connected {
+		t.Fatalf("failed to connect to newly added node port 30002. sing-box log:\n%s", runBuf.String())
+	}
+	t.Logf("sing-box run started successfully with port 30002 open! Log:\n%s", runBuf.String())
+}
+

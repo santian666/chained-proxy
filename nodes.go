@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"runtime"
 )
 
 // ServerNode 表示当前服务器上的一个完整节点（对应 all.json 中的一对 inbound + outbound + route rule）
@@ -309,31 +310,17 @@ func SaveNodesToPath(allJSONPath, backupDir string, nodes []ServerNode) error {
 		})
 	}
 
+	logObj := map[string]any{
+		"disabled":  false,
+		"level":     "warn",
+		"timestamp": true,
+	}
+	if runtime.GOOS == "linux" {
+		logObj["output"] = logFilePath
+	}
+
 	all := map[string]any{
-		"log": map[string]any{
-			"disabled":  false,
-			"level":     "warn",
-			"output":    logFilePath,
-			"timestamp": true,
-		},
-		"dns": map[string]any{
-			"servers": []any{
-				map[string]any{
-					"tag":    "dns-direct",
-					"type":   "udp",
-					"server": "8.8.8.8",
-				},
-				map[string]any{
-					"tag":    "dns-backup",
-					"type":   "udp",
-					"server": "1.1.1.1",
-				},
-				map[string]any{
-					"tag":  "dns-local",
-					"type": "local",
-				},
-			},
-		},
+		"log":       logObj,
 		"inbounds":  inbounds,
 		"outbounds": outbounds,
 		"route": map[string]any{
@@ -447,7 +434,6 @@ func BuildNewNode(inboundProto string, listenHost string, port int, realitySNI s
 			"type":        "socks",
 			"server":      socks.Host,
 			"server_port": socks.Port,
-			"network":     "tcp",
 		}
 		if socks.Username != "" {
 			ob["username"] = socks.Username

@@ -359,7 +359,6 @@ func ensureBaseConfigFiles() {
 				"output":    logFilePath,
 				"timestamp": true,
 			},
-			"dns":       dnsDirect,
 			"inbounds":  []any{},
 			"outbounds": []any{},
 			"route": map[string]any{
@@ -368,6 +367,15 @@ func ensureBaseConfigFiles() {
 			},
 		}
 		_ = writeFormattedJSON(singboxAllJSON, initialAll)
+	} else {
+		// 自动排查与修复：若历史 all.json 中存在独立的 dns 块，移除以避免与 config.json 触发 duplicate DNS server tag
+		if data, err := os.ReadFile(singboxAllJSON); err == nil && len(data) > 0 {
+			var parsed map[string]any
+			if json.Unmarshal(data, &parsed) == nil && parsed["dns"] != nil {
+				delete(parsed, "dns")
+				_ = writeFormattedJSON(singboxAllJSON, parsed)
+			}
+		}
 	}
 }
 
