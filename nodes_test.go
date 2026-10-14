@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -414,7 +415,39 @@ func TestSingboxLiveMergeAndRun(t *testing.T) {
 	}
 	t.Logf("sing-box check 2 passed successfully!")
 
-	// 4. 真实运行 sing-box run 验证 2 个节点同时在线且无运行时 DNS 报错
+	// 3. 第三次添加节点 (纯直连 Direct 模式 2 个)
+	loaded, _ = LoadNodesFromPath(allJSONPath)
+	n3 := BuildNewNode("vless-reality", "127.0.0.1", 30003, "stock.adobe.com", "direct", "", nil, "127.0.0.1")
+	n4 := BuildNewNode("socks", "127.0.0.1", 30004, "", "direct", "", nil, "127.0.0.1")
+	allNodes = append(loaded, n3, n4)
+	if err := SaveNodesToPath(allJSONPath, "", allNodes); err != nil {
+		t.Fatalf("SaveNodesToPath 3 failed: %v", err)
+	}
+	cmd3 := exec.Command(sbExe, "check", "-c", mainConfigPath, "-C", confDir)
+	out3, err := cmd3.CombinedOutput()
+	if err != nil {
+		t.Fatalf("sing-box check 3 failed: %v\nOutput:\n%s", err, string(out3))
+	}
+	t.Logf("sing-box check 3 passed (2 chained + 2 direct) successfully!")
+
+	// 4. 第四次再添加节点 (再次批量添加 SOCKS5 链式代理 2 个)
+	loaded, _ = LoadNodesFromPath(allJSONPath)
+	ep3 := &Socks5Endpoint{Host: "45.15.98.221", Port: 7153, Username: "u3", Password: "p3"}
+	ep4 := &Socks5Endpoint{Host: "45.15.98.239", Port: 7153, Username: "u4", Password: "p4"}
+	n5 := BuildNewNode("vless-reality", "127.0.0.1", 30005, "stock.adobe.com", "socks", "", ep3, "127.0.0.1")
+	n6 := BuildNewNode("socks", "127.0.0.1", 30006, "", "socks", "", ep4, "127.0.0.1")
+	allNodes = append(loaded, n5, n6)
+	if err := SaveNodesToPath(allJSONPath, "", allNodes); err != nil {
+		t.Fatalf("SaveNodesToPath 4 failed: %v", err)
+	}
+	cmd4 := exec.Command(sbExe, "check", "-c", mainConfigPath, "-C", confDir)
+	out4, err := cmd4.CombinedOutput()
+	if err != nil {
+		t.Fatalf("sing-box check 4 failed: %v\nOutput:\n%s", err, string(out4))
+	}
+	t.Logf("sing-box check 4 passed (共 6 个混部节点) successfully!")
+
+	// 5. 真实运行 sing-box run 验证多节点多批次混部同时在线且无运行时 DNS 报错
 	var runBuf strings.Builder
 	runCmd := exec.Command(sbExe, "run", "-c", mainConfigPath, "-C", confDir)
 	runCmd.Stdout = &runBuf
@@ -427,19 +460,21 @@ func TestSingboxLiveMergeAndRun(t *testing.T) {
 	}()
 
 	// 监听端口是否成功打开
-	var connected bool
-	for i := 0; i < 20; i++ {
-		time.Sleep(100 * time.Millisecond)
-		conn, err := net.DialTimeout("tcp", "127.0.0.1:30002", 200*time.Millisecond)
-		if err == nil {
-			conn.Close()
-			connected = true
-			break
+	for _, port := range []int{30001, 30002, 30003, 30004, 30005, 30006} {
+		var connected bool
+		for i := 0; i < 20; i++ {
+			time.Sleep(50 * time.Millisecond)
+			conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 200*time.Millisecond)
+			if err == nil {
+				conn.Close()
+				connected = true
+				break
+			}
+		}
+		if !connected {
+			t.Fatalf("failed to connect to port %d. sing-box log:\n%s", port, runBuf.String())
 		}
 	}
-	if !connected {
-		t.Fatalf("failed to connect to newly added node port 30002. sing-box log:\n%s", runBuf.String())
-	}
-	t.Logf("sing-box run started successfully with port 30002 open! Log:\n%s", runBuf.String())
+	t.Logf("sing-box run successfully listening on all 6 ports across 4 batches of additions!")
 }
 
